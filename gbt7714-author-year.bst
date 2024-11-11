@@ -52,6 +52,7 @@ INTEGERS {
   show.note
   show.english.translation
   end.with.period
+  en.dash.in.pages
   lang.zh.order
   lang.ja.order
   lang.en.order
@@ -97,6 +98,7 @@ FUNCTION {load.config}
   #0 'show.note :=
   #0 'show.english.translation :=
   #1 'end.with.period :=
+  #0 'en.dash.in.pages :=
   #1 'lang.zh.order :=
   #2 'lang.ja.order :=
   #3 'lang.en.order :=
@@ -1398,12 +1400,22 @@ FUNCTION {hyphenate}
   ""
     { t empty$ not }
     { t #1 #1 substring$ "-" =
+      t #1 #3 substring$ "–" =
+      or
         { wave.dash.in.pages
             { "～" * }
-            { "-" * }
+            { en.dash.in.pages
+               { "--" * }
+               { "-" * }
+             if$ }
           if$
-            { t #1 #1 substring$ "-" = }
-            { t #2 global.max$ substring$ 't := }
+            { t #1 #1 substring$ "-" =
+              t #1 #3 substring$ "–" =
+              or }
+            { t #1 #1 substring$ "-" =
+              { t #2 global.max$ substring$ 't := }
+              { t #4 global.max$ substring$ 't := }
+              if$ }
           while$
         }
         { t #1 #1 substring$ *
