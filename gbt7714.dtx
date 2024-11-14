@@ -1248,10 +1248,10 @@ FUNCTION {load.config}
 % 忽略词间多余的空格
 %    \begin{macrocode}
 %<*!ignore-extra-interword-space>
-  #0 'ignore.extra.interword.space :=
+  #1 'ignore.extra.interword.space :=
 %</!ignore-extra-interword-space>
 %<*ignore-extra-interword-space>
-  #1 'ignore.extra.interword.space :=
+  #0 'ignore.extra.interword.space :=
 %</ignore-extra-interword-space>
 %    \end{macrocode}
 %
@@ -2384,17 +2384,20 @@ FUNCTION {smart.sentence.case.inter.token}
 
 FUNCTION {smart.sentence.case.lower.token}
 {
-  duplicate$ text.length$ #2 <
+  duplicate$ 't :=
+  t text.length$ #2 <
     'skip$
     {
-      duplicate$ duplicate$
-      #2 #1 substring$ chr.to.int$
-      swap$
-      #1 #1 substring$ chr.to.int$
+      t #1 #1 substring$ chr.to.int$
       duplicate$ #64 > swap$ #91 < and
-      swap$
-      duplicate$ #96 > swap$ #123 < and
-      and
+      { t #2 global.max$ substring$ 't :=
+        duplicate$ t empty$ not and }
+        {
+          pop$
+          t #1 #1 substring$ chr.to.int$
+          duplicate$ #96 > swap$ #123 < and
+        }
+      while$
         { "l" change.case$ }
         'skip$
       if$
@@ -2408,13 +2411,23 @@ FUNCTION {smart.sentence.case.tokenize}
 
   ""
   s #1 #1 substring$ ":" =
+  s #1 #1 substring$ "-" = or
+  s #1 #1 substring$ "," = or
+  s #1 #1 substring$ "." = or
+  s #1 #1 substring$ "!" = or
+  s #1 #1 substring$ "?" = or
     {
-      ":" *
+      s #1 #1 substring$ *
       s #2 global.max$ substring$ 's :=
     }
     {
       { s #1 #1 substring$ " " =
         s #1 #1 substring$ ":" = or
+        s #1 #1 substring$ "-" = or
+        s #1 #1 substring$ "," = or
+        s #1 #1 substring$ "." = or
+        s #1 #1 substring$ "!" = or
+        s #1 #1 substring$ "?" = or
         s empty$ or
         not }
         {
