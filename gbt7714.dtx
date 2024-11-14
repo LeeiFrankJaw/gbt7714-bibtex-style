@@ -346,6 +346,8 @@
 %   show.note                      & |#0|   & 显示 note 域的信息             \\
 %   end.with.period                & |#1|   & 结尾加句点                     \\
 %   en.dash.in.pages               & |#0|   & 使用短破折号（en dash）来分割页码 \\
+%   ignore.extra.interword.space   & |#1|   & 忽略词间多余的空格 \\
+%   lowercase.word.after.colon     & |#1|   & 将冒号后的单词变成小写 \\
 %   \bottomrule
 % \end{tabular}
 % \end{table}
@@ -916,6 +918,8 @@ INTEGERS {
   show.english.translation
   end.with.period
   en.dash.in.pages
+  ignore.extra.interword.space
+  lowercase.word.after.colon
 %<*author-year>
   lang.zh.order
   lang.ja.order
@@ -1239,6 +1243,26 @@ FUNCTION {load.config}
 %<*en-dash-in-pages>
   #1 'en.dash.in.pages :=
 %</en-dash-in-pages>
+%    \end{macrocode}
+%
+% 忽略词间多余的空格
+%    \begin{macrocode}
+%<*!ignore-extra-interword-space>
+  #0 'ignore.extra.interword.space :=
+%</!ignore-extra-interword-space>
+%<*ignore-extra-interword-space>
+  #1 'ignore.extra.interword.space :=
+%</ignore-extra-interword-space>
+%    \end{macrocode}
+%
+% 将冒号后的单词变成小写
+%    \begin{macrocode}
+%<*!lowercase-word-after-colon>
+  #1 'lowercase.word.after.colon :=
+%</!lowercase-word-after-colon>
+%<*lowercase-word-after-colon>
+  #0 'lowercase.word.after.colon :=
+%</lowercase-word-after-colon>
 %    \end{macrocode}
 %
 % 参考文献表按照“著者-出版年”组织时，各个文种的顺序：
@@ -2297,9 +2321,167 @@ FUNCTION {output.bibitem}
 % and hope the user has brace-surrounded words that need to stay capitilized;
 % for some styles, however, we leave it as it is in the database.
 %    \begin{macrocode}
+FUNCTION {find.match.brace}
+{
+  's :=
+  't :=
+  #1
+  { duplicate$ #0 >
+    s empty$ not and }
+    {
+      s #1 #1 substring$ "{" =
+        { #1 + }
+        {
+          s #1 #1 substring$ "}" =
+            { #1 - }
+            'skip$
+            % { "here" top$ s top$ s empty$ top$ duplicate$ top$ }
+          if$
+        }
+      if$
+      t s #1 #1 substring$ * 't :=
+      s #2 global.max$ substring$ 's :=
+    }
+  while$
+
+  #0 >
+    { "Unbalanced brace(s): one or more closing braces are missing" warning$ }
+    'skip$
+  if$
+
+  t
+  s
+}
+
+FUNCTION {smart.sentence.case.inter.token}
+{
+  's :=
+
+  ""
+  ignore.extra.interword.space
+    { s #1 #1 substring$ " " =
+      s empty$ not and
+        {
+          " " *
+          { s #1 #1 substring$ " " = }
+            { s #2 global.max$ substring$ 's := }
+          while$
+        }
+        'skip$
+      if$
+    }
+    { { s #1 #1 substring$ " " =
+        s empty$ not and }
+        {
+          " " *
+          s #2 global.max$ substring$ 's :=
+        }
+      while$ }
+  if$
+
+  s
+}
+
+FUNCTION {smart.sentence.case.lower.token}
+{
+  duplicate$ text.length$ #2 <
+    'skip$
+    {
+      duplicate$ duplicate$
+      #2 #1 substring$ chr.to.int$
+      swap$
+      #1 #1 substring$ chr.to.int$
+      duplicate$ #64 > swap$ #91 < and
+      swap$
+      duplicate$ #96 > swap$ #123 < and
+      and
+        { "l" change.case$ }
+        'skip$
+      if$
+    }
+  if$
+}
+
+FUNCTION {smart.sentence.case.tokenize}
+{
+  's :=
+
+  ""
+  s #1 #1 substring$ ":" =
+    {
+      ":" *
+      s #2 global.max$ substring$ 's :=
+    }
+    {
+      { s #1 #1 substring$ " " =
+        s #1 #1 substring$ ":" = or
+        s empty$ or
+        not }
+        {
+          s #1 #1 substring$
+          *
+          s #1 #1 substring$
+          s #2 global.max$ substring$ 's :=
+          "{" =
+            { s find.match.brace 's := }
+            'skip$
+          if$
+        }
+      while$
+    }
+  if$
+
+  s
+}
+
+FUNCTION {smart.sentence.case}
+{
+  { duplicate$ #1 #1 substring$ " " = }
+    { #2 global.max$ substring$ }
+  while$
+
+  smart.sentence.case.tokenize
+  's :=
+
+  { s empty$ not }
+    {
+      s
+      smart.sentence.case.inter.token
+      's :=
+      *
+      s
+      smart.sentence.case.tokenize
+      's :=
+      duplicate$ ":" =
+        {
+          *
+          s
+          smart.sentence.case.inter.token
+          's :=
+          *
+          s
+          smart.sentence.case.tokenize
+          's :=
+          lowercase.word.after.colon
+            {
+              duplicate$ "A" =
+                { "l" change.case$ }
+                'smart.sentence.case.lower.token
+              if$
+            }
+            'skip$
+          if$
+        }
+        'smart.sentence.case.lower.token
+      if$
+      *
+    }
+  while$
+}
+
 FUNCTION {change.sentence.case}
 { entry.lang lang.en =
-    { "t" change.case$ }
+    'smart.sentence.case
     'skip$
   if$
 }
