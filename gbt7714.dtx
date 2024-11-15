@@ -346,7 +346,6 @@
 %   show.note                      & |#0|   & 显示 note 域的信息             \\
 %   end.with.period                & |#1|   & 结尾加句点                     \\
 %   en.dash.in.pages               & |#0|   & 使用短破折号（en dash）来分割页码 \\
-%   ignore.extra.interword.space   & |#1|   & 忽略词间多余的空格 \\
 %   lowercase.word.after.colon     & |#1|   & 将冒号后的单词变成小写 \\
 %   \bottomrule
 % \end{tabular}
@@ -918,7 +917,6 @@ INTEGERS {
   show.english.translation
   end.with.period
   en.dash.in.pages
-  ignore.extra.interword.space
   lowercase.word.after.colon
 %<*author-year>
   lang.zh.order
@@ -1245,23 +1243,13 @@ FUNCTION {load.config}
 %</en-dash-in-pages>
 %    \end{macrocode}
 %
-% 忽略词间多余的空格
-%    \begin{macrocode}
-%<*!ignore-extra-interword-space>
-  #1 'ignore.extra.interword.space :=
-%</!ignore-extra-interword-space>
-%<*ignore-extra-interword-space>
-  #0 'ignore.extra.interword.space :=
-%</ignore-extra-interword-space>
-%    \end{macrocode}
-%
 % 将冒号后的单词变成小写
 %    \begin{macrocode}
 %<*!lowercase-word-after-colon>
-  #1 'lowercase.word.after.colon :=
+  #0 'lowercase.word.after.colon :=
 %</!lowercase-word-after-colon>
 %<*lowercase-word-after-colon>
-  #0 'lowercase.word.after.colon :=
+  #1 'lowercase.word.after.colon :=
 %</lowercase-word-after-colon>
 %    \end{macrocode}
 %
@@ -2358,26 +2346,13 @@ FUNCTION {smart.sentence.case.inter.token}
   's :=
 
   ""
-  ignore.extra.interword.space
-    { s #1 #1 substring$ " " =
-      s empty$ not and
-        {
-          " " *
-          { s #1 #1 substring$ " " = }
-            { s #2 global.max$ substring$ 's := }
-          while$
-        }
-        'skip$
-      if$
+  { s #1 #1 substring$ " " =
+    s empty$ not and }
+    {
+      " " *
+      s #2 global.max$ substring$ 's :=
     }
-    { { s #1 #1 substring$ " " =
-        s empty$ not and }
-        {
-          " " *
-          s #2 global.max$ substring$ 's :=
-        }
-      while$ }
-  if$
+  while$
 
   s
 }
@@ -2449,10 +2424,6 @@ FUNCTION {smart.sentence.case.tokenize}
 
 FUNCTION {smart.sentence.case}
 {
-  { duplicate$ #1 #1 substring$ " " = }
-    { #2 global.max$ substring$ }
-  while$
-
   smart.sentence.case.tokenize
   's :=
 
