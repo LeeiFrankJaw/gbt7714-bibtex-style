@@ -345,14 +345,13 @@
 %   show.missing.address.publisher & |#0|   & 出版项缺失时显示“出版者不详”   \\
 %   space.before.pages             & |#1|   & 页码与前面的冒号之间有空格     \\
 %   only.start.page                & |#0|   & 只显示起始页码                 \\
-%   wave.dash.in.pages             & |#0|   & 起止页码使用波浪号             \\
+%   page.range.separator           & |"-"|  & 起止页码中的连接号             \\
 %   show.urldate                   & |#1|   & 显示引用日期 urldate           \\
 %   show.url                       & |#1|   & 显示 url                       \\
 %   show.doi                       & |#1|   & 显示 DOI                       \\
 %   show.preprint                  & |#1|   & 显示预印本信息                 \\
 %   show.note                      & |#0|   & 显示 note 域的信息             \\
 %   end.with.period                & |#1|   & 结尾加句点                     \\
-%   en.dash.in.pages               & |#0|   & 使用短破折号（en dash）来分割页码 \\
 %   lowercase.word.after.colon     & |#1|   & 将冒号后的单词变成小写 \\
 %   \bottomrule
 % \end{tabular}
@@ -915,7 +914,6 @@ INTEGERS {
   show.missing.address.publisher
   space.before.pages
   only.start.page
-  wave.dash.in.pages
   show.urldate
   show.url
   show.doi
@@ -923,7 +921,6 @@ INTEGERS {
   show.note
   show.english.translation
   end.with.period
-  en.dash.in.pages
   lowercase.word.after.colon
 %<*author-year>
   lang.zh.order
@@ -936,6 +933,7 @@ INTEGERS {
 
 STRINGS {
   component.part.label
+  page.range.separator
 }
 
 %    \end{macrocode}
@@ -1165,14 +1163,17 @@ FUNCTION {load.config}
 %</only-start-page>
 %    \end{macrocode}
 %
-% 起止页码使用波浪号：
+% 起止页码中的连接号：
 %    \begin{macrocode}
-%<*!wave-dash-in-pages>
-  #0 'wave.dash.in.pages :=
-%</!wave-dash-in-pages>
-%<*wave-dash-in-pages>
-  #1 'wave.dash.in.pages :=
-%</wave-dash-in-pages>
+%<*!(en-dash-page-range-separator|wave-dash-page-range-separator)>
+  "-" 'page.range.separator :=
+%</!(en-dash-page-range-separator|wave-dash-page-range-separator)>
+%<*en-dash-page-range-separator>
+  "--" 'page.range.separator :=
+%</en-dash-page-range-separator>
+%<*wave-dash-page-range-separator>
+  "～" 'page.range.separator :=
+%</wave-dash-page-range-separator>
 %    \end{macrocode}
 %
 % 是否著录非电子文献的引用日期：
@@ -1240,24 +1241,14 @@ FUNCTION {load.config}
 %</no-period-at-end>
 %    \end{macrocode}
 %
-% 使用短破折号（en dash）来分割页码
-%    \begin{macrocode}
-%<*!en-dash-in-pages>
-  #0 'en.dash.in.pages :=
-%</!en-dash-in-pages>
-%<*en-dash-in-pages>
-  #1 'en.dash.in.pages :=
-%</en-dash-in-pages>
-%    \end{macrocode}
-%
 % 将冒号后的单词变成小写
 %    \begin{macrocode}
-%<*!lowercase-word-after-colon>
+%<*!no-lowercase-word-after-colon>
   #1 'lowercase.word.after.colon :=
-%</!lowercase-word-after-colon>
-%<*lowercase-word-after-colon>
+%</!no-lowercase-word-after-colon>
+%<*no-lowercase-word-after-colon>
   #0 'lowercase.word.after.colon :=
-%</lowercase-word-after-colon>
+%</no-lowercase-word-after-colon>
 %    \end{macrocode}
 %
 % 参考文献表按照“著者-出版年”组织时，各个文种的顺序：
@@ -1596,11 +1587,13 @@ FUNCTION {bbl.sine.loco.sine.nomine}
   if$
 }
 
-FUNCTION {self.tokens} { ":-,.!?'" }
+FUNCTION {self.tokens} { ":,-'–—?.!" }
 
 FUNCTION {latin1.upper} { "ÀÁÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ" }
 
 FUNCTION {latin1.lower} { "àáãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" }
+
+FUNCTION {page.range.separators} { "-–—~～" }
 
 %    \end{macrocode}
 %
@@ -3428,35 +3421,28 @@ FUNCTION {format.urldate}
 %
 % 国标里页码范围的连接号使用 hyphen，需要将 dash 转为 hyphen。
 %    \begin{macrocode}
-FUNCTION {hyphenate}
-{ 't :=
-  ""
-    { t empty$ not }
-    { t #1 #1 substring$ "-" =
-      t #1 #3 substring$ "–" =
-      or
-        { wave.dash.in.pages
-            { "～" * }
-            { en.dash.in.pages
-               { "--" * }
-               { "-" * }
-             if$ }
-          if$
-            { t #1 #1 substring$ "-" =
-              t #1 #3 substring$ "–" =
-              or }
-            { t #1 #1 substring$ "-" =
-              { t #2 global.max$ substring$ 't := }
-              { t #4 global.max$ substring$ 't := }
-              if$ }
-          while$
-        }
-        { t #1 #1 substring$ *
-          t #2 global.max$ substring$ 't :=
-        }
-      if$
-    }
+% str -> str
+% variable used: t
+FUNCTION {normalize.page.range}
+{
+  "" swap$
+  { duplicate$ empty$ not }
+  {
+    split.first.char.from.str
+    duplicate$ page.range.separators swap$ is.char.in.str
+      {
+        { pop$ split.first.char.from.str
+          duplicate$ page.range.separators swap$ is.char.in.str }
+          'skip$
+        while$
+        page.range.separator swap$ *
+      }
+      'skip$
+    if$
+    swap$ 't := * t
+  }
   while$
+  pop$
 }
 
 %    \end{macrocode}
@@ -3467,7 +3453,7 @@ FUNCTION {hyphenate}
 FUNCTION {format.pages}
 { pages empty$
     { "" }
-    { pages hyphenate }
+    { pages normalize.page.range }
   if$
 }
 
@@ -3477,7 +3463,7 @@ FUNCTION {format.extracted.pages}
     { pages
       only.start.page
         'extract.before.dash
-        'hyphenate
+        'normalize.page.range
       if$
     }
   if$
