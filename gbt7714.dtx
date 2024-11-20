@@ -2338,7 +2338,7 @@ INTEGERS { b }
 
 % int, int, int -> bool
 % variable used: b
-FUNCTION {is.integer.in.range}
+FUNCTION {is.int.in.range}
 {
   'b :=
   #1 +
@@ -2446,29 +2446,44 @@ FUNCTION {is.char.in.str}
 
 % char -> bool
 % variable used: b
-FUNCTION {is.ascii}
+FUNCTION {is.upper.ascii}
 {
-  char.to.unicode #65 swap$ #90 swap$ is.integer.in.range
+  char.to.unicode #65 swap$ #90 swap$ is.int.in.range
 }
 
 % char -> bool
 % variable used: b
 FUNCTION {is.upper}
 {
-  char.to.unicode duplicate$ duplicate$
-  #65 swap$ #90 swap$ is.integer.in.range swap$
-  #192 swap$ #214 swap$ is.integer.in.range or swap$
-  #216 swap$ #222 swap$ is.integer.in.range or
+  duplicate$ is.upper.ascii
+    { pop$ #1 }
+    {
+      char.to.unicode duplicate$
+      #192 swap$ #214 swap$ is.int.in.range swap$
+      #216 swap$ #222 swap$ is.int.in.range or
+    }
+  if$
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.lower.ascii}
+{
+  char.to.unicode #97 swap$ #122 swap$ is.int.in.range
 }
 
 % char -> bool
 % variable used: b
 FUNCTION {is.lower}
 {
-  char.to.unicode duplicate$ duplicate$
-  #97 swap$ #122 swap$ is.integer.in.range swap$
-  #223 swap$ #246 swap$ is.integer.in.range or swap$
-  #248 swap$ #255 swap$ is.integer.in.range or
+  duplicate$ is.lower.ascii
+    { pop$ #1 }
+    {
+      char.to.unicode duplicate$
+      #223 swap$ #246 swap$ is.int.in.range swap$
+      #248 swap$ #255 swap$ is.int.in.range or
+    }
+  if$
 }
 
 % str -> bool
@@ -2515,7 +2530,7 @@ FUNCTION {map.char}
 % variables used: t, b
 FUNCTION {to.lower}
 {
-  duplicate$ is.ascii
+  duplicate$ is.upper.ascii
     { chr.to.int$ #32 + int.to.chr$ }
     { latin1.lower swap$ latin1.upper swap$ map.char }
   if$
