@@ -2348,11 +2348,11 @@ FUNCTION {is.int.in.range}
   if$
 }
 
-% str -> str, char
+% str -> str, char|""
 FUNCTION {split.first.char.from.str}
 {
   duplicate$ "" =
-    { #0 int.to.chr$ }
+    { "" }
     {
       duplicate$ #1 #1 substring$ chr.to.int$ #128 <
         {
@@ -2384,7 +2384,7 @@ FUNCTION {split.first.char.from.str}
   if$
 }
 
-% str -> char
+% str -> char|""
 FUNCTION {get.first.char.from.str}
 {
   split.first.char.from.str swap$ pop$
@@ -2432,16 +2432,16 @@ FUNCTION {char.to.unicode}
 FUNCTION {is.char.in.str}
 {
   't :=
-  split.first.char.from.str
-  { swap$ duplicate$ "" = not }
+  #0 swap$
+  { duplicate$ "" = not }
     {
-      swap$ t =
-        { pop$ "" t }
-        'split.first.char.from.str
+      split.first.char.from.str t =
+        { pop$ pop$ #1 "" }
+        'skip$
       if$
     }
   while$
-  pop$ t =
+  pop$
 }
 
 % char -> bool
@@ -2488,19 +2488,19 @@ FUNCTION {is.lower}
 
 % str -> bool
 % variable used: b
-% return false if str is empty
+% return true if str is empty
 FUNCTION {is.all.lower}
 {
-  split.first.char.from.str
-  { swap$ duplicate$ "" = not }
+  #1 swap$
+  { duplicate$ "" = not }
     {
-      swap$ is.lower
-        'split.first.char.from.str
-        { pop$ "" "A" }
+      split.first.char.from.str is.lower
+        'skip$
+        { pop$ pop$ #0 "" }
       if$
     }
   while$
-  pop$ is.lower
+  pop$
 }
 
 % str, str, char -> char
@@ -2540,9 +2540,19 @@ FUNCTION {to.lower}
 % variable used: b
 FUNCTION {is.in.title.case}
 {
-  split.first.char.from.str is.upper
-    'is.all.lower
+  duplicate$ "" =
     { pop$ #0 }
+    {
+      split.first.char.from.str is.upper
+        {
+          duplicate$ "" =
+            { pop$ #0 }
+            'is.all.lower
+          if$
+        }
+        { pop$ #0 }
+      if$
+    }
   if$
 }
 
