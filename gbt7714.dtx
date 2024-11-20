@@ -1494,8 +1494,6 @@ INTEGERS { lang.zh lang.ja lang.en lang.ru lang.other }
 
 INTEGERS { charptr len }
 
-STRINGS { self.tokens latin1.lower latin1.upper }
-
 FUNCTION {init.state.consts}
 { #0 'before.all :=
   #1 'mid.sentence :=
@@ -1507,9 +1505,6 @@ FUNCTION {init.state.consts}
   #1 'lang.en :=
   #2 'lang.ru :=
   #0 'lang.other :=
-  ":-,.!?'" 'self.tokens :=
-  "ÀÁÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ" 'latin1.upper :=
-  "àáãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" 'latin1.lower :=
 }
 
 %    \end{macrocode}
@@ -1600,6 +1595,12 @@ FUNCTION {bbl.sine.loco.sine.nomine}
     { "[S.l.: s.n.]" }
   if$
 }
+
+FUNCTION {self.tokens} { ":-,.!?'" }
+
+FUNCTION {latin1.upper} { "ÀÁÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ" }
+
+FUNCTION {latin1.lower} { "àáãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" }
 
 %    \end{macrocode}
 %
