@@ -22,7 +22,7 @@
 %<*driver>
 \documentclass[a4paper]{l3doc}
 \usepackage{hypdoc}
-\usepackage[UTF8]{ctex}
+\usepackage[UTF8,fontset=none]{ctex}
 \usepackage{fontspec}
 \usepackage{caption}
 \usepackage{booktabs}
@@ -31,17 +31,18 @@
 \usepackage{listings}
 \makeatletter
 \hypersetup{allcolors=blue}
-% \setmainfont{Palatino Linotype}
-% \setsansfont[Scale=MatchLowercase]{Helvetica}
-% \setmonofont[Scale=MatchLowercase]{Menlo}
 \IfFileExists{/System/Library/Fonts/Palatino.ttc}{
   \setmainfont{Palatino}
   \setsansfont[Scale=MatchLowercase]{Helvetica}
   \setmonofont[Scale=MatchLowercase]{Menlo}
+  \ctexset{fontset=macnew}
 }{%
-  \IfFontExistsTF{Palatino}{\setmainfont{Palatino}}{}
-  \IfFontExistsTF{Helvetica}{\setsansfont[Scale=MatchLowercase]{Helvetica}}{}
-  \IfFontExistsTF{Menlo}{\setmonofont[Scale=MatchLowercase]{Menlo}}{}
+  \IfFontExistsTF{Songti SC}{%
+    \setmainfont{Palatino}
+    \setsansfont[Scale=MatchLowercase]{Helvetica}
+    \setmonofont[Scale=MatchLowercase]{Menlo}
+    \ctexset{fontset=macnew}
+  }{\ctexset{fontset=fandol}}
 }
 \citestyle{super}
 \lstnewenvironment{latex}{%
