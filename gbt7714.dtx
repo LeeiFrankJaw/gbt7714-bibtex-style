@@ -1588,13 +1588,13 @@ FUNCTION {bbl.sine.loco.sine.nomine}
   if$
 }
 
-FUNCTION {self.tokens} { ":,-'–—?.!" }
+FUNCTION {default.self.tokens} { ":,-'–—?.!" }
 
 FUNCTION {latin1.upper} { "ÀÁÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ" }
 
 FUNCTION {latin1.lower} { "àáãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" }
 
-FUNCTION {page.range.separators} { "-–—~～" }
+FUNCTION {range.separators} { "-–—~～" }
 
 %    \end{macrocode}
 %
@@ -2606,17 +2606,27 @@ FUNCTION {smart.sentence.case.inter.token}
   while$
 }
 
-% str -> token: str, rest: str
-% variables used: s, t
-FUNCTION {smart.sentence.case.tokenize}
+% int -> str
+FUNCTION {self.tokens}
 {
+  #0 =
+    'default.self.tokens
+    'range.separators
+  if$
+}
+
+% str, int -> token: str, rest: str
+% variables used: s, t, b
+FUNCTION {tokenize.by}
+{
+  'b :=
   's :=
 
-  self.tokens s get.first.char.from.str is.char.in.str
+  b self.tokens s get.first.char.from.str is.char.in.str
     { s split.first.char.from.str swap$ }
     {
       ""
-      { " " self.tokens * s get.first.char.from.str is.char.in.str
+      { " " b self.tokens * s get.first.char.from.str is.char.in.str
         s empty$ or
         not }
         {
@@ -2633,21 +2643,28 @@ FUNCTION {smart.sentence.case.tokenize}
   if$
 }
 
+% str -> token: str, rest: str
+% variables used: s, t, b
+FUNCTION {tokenize}
+{
+  #0 tokenize.by
+}
+
 % str -> str
 % variables used: s, t, b
 FUNCTION {smart.sentence.case}
 {
-  smart.sentence.case.tokenize 's :=
+  tokenize 's :=
 
   { s "" = not }
     {
       s smart.sentence.case.inter.token
-      smart.sentence.case.tokenize swap$
+      tokenize swap$
       duplicate$ ":" =
         {
           swap$ 's := *
           s smart.sentence.case.inter.token
-          smart.sentence.case.tokenize swap$
+          tokenize swap$
           lowercase.word.after.colon
             {
               duplicate$ "A" =
@@ -3430,10 +3447,10 @@ FUNCTION {normalize.page.range}
   { duplicate$ empty$ not }
   {
     split.first.char.from.str
-    duplicate$ page.range.separators swap$ is.char.in.str
+    duplicate$ range.separators swap$ is.char.in.str
       {
         { pop$ split.first.char.from.str
-          duplicate$ page.range.separators swap$ is.char.in.str }
+          duplicate$ range.separators swap$ is.char.in.str }
           'skip$
         while$
         page.range.separator swap$ *
@@ -3463,7 +3480,7 @@ FUNCTION {format.extracted.pages}
     { "" }
     { pages
       only.start.page
-        'extract.before.dash
+        { #1 tokenize.by pop$ }
         'normalize.page.range
       if$
     }
