@@ -1829,6 +1829,586 @@ FUNCTION {new.sentence.checkb}
 
 %    \end{macrocode}
 %
+% In order to support UTF-8 encoding, we need some auxiliary functions.  Below
+% are a series of such functions.
+%    \begin{macrocode}
+INTEGERS { b }
+
+% int, int, int -> bool
+% variable used: b
+FUNCTION {is.int.in.range}
+{
+  'b :=
+  #1 +
+  b >
+    { #1 - b < }
+    { pop$ #0 }
+  if$
+}
+
+%    \end{macrocode}
+%
+% Function |mult.power2| takes two integer arguments and returns \(2^nm\).
+%    \begin{macrocode}
+% int, int -> int
+FUNCTION {mult.power2}
+{
+  { duplicate$ #0 > }
+    {
+      swap$
+      duplicate$ +
+      swap$ #1 -
+    }
+  while$
+  pop$
+}
+
+% "{", str -> subtoken: str, rest: str
+% variables used: s, t
+FUNCTION {find.match.brace}
+{
+  's :=
+  't :=
+
+  #1
+  { duplicate$ #0 >
+    s empty$ not and }
+    {
+      s #1 #1 substring$ "{" =
+        { #1 + }
+        {
+          s #1 #1 substring$ "}" =
+            { #1 - }
+            'skip$
+          if$
+        }
+      if$
+      t s #1 #1 substring$ * 't :=
+      s #2 global.max$ substring$ 's :=
+    }
+  while$
+
+  duplicate$ #0 >
+    {
+      "Unbalanced brace(s): one or more closing braces are missing" warning$
+      { duplicate$ #0 > }
+        {
+          t "}" * 't :=
+          #1 -
+        }
+      while$
+    }
+    'skip$
+  if$
+  pop$
+
+  t
+  s
+}
+
+% str -> str, char
+FUNCTION {split.first.char.from.str}
+{
+  duplicate$ "" =
+    {
+      "split.first.char.from.str: Trying to split an empty string!" warning$
+      ""
+    }
+    {
+      duplicate$ #1 #1 substring$ chr.to.int$ #128 <
+        {
+          duplicate$ #1 #1 substring$ swap$
+          #2 global.max$ substring$ swap$
+        }
+        {
+          duplicate$ #1 #1 substring$ chr.to.int$ #224 <
+            {
+              duplicate$ #1 #2 substring$ swap$
+              #3 global.max$ substring$ swap$
+            }
+            {
+              duplicate$ #1 #1 substring$ chr.to.int$ #240 <
+                {
+                  duplicate$ #1 #3 substring$ swap$
+                  #4 global.max$ substring$ swap$
+                }
+                {
+                  duplicate$ #1 #4 substring$ swap$
+                  #5 global.max$ substring$ swap$
+                }
+              if$
+            }
+          if$
+        }
+      if$
+    }
+  if$
+}
+
+% str -> char
+FUNCTION {get.first.char.from.str}
+{
+  split.first.char.from.str swap$ pop$
+}
+
+% str -> rest: str, texchar
+FUNCTION {split.first.tex.char.from.str}
+{
+  duplicate$ #1 #2 substring$ "{" #92 int.to.chr$ * =
+    {
+      split.first.char.from.str swap$
+      find.match.brace swap$
+    }
+    'split.first.char.from.str
+  if$
+}
+
+% char -> int
+FUNCTION {char.to.unicode}
+{
+  duplicate$ #4 #1 substring$ "" =
+    {
+      duplicate$ #3 #1 substring$ "" =
+        {
+          duplicate$ #2 #1 substring$ "" =
+            {
+              duplicate$ "" =
+                {
+                  "Empty string is not a char!" warning$
+                  pop$ #-1
+                }
+                { #1 #1 substring$ chr.to.int$ }
+              if$
+            }
+            {
+              duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
+              #1 #1 substring$ chr.to.int$ #192 -
+              #6 mult.power2 +
+            }
+          if$
+        }
+        {
+          duplicate$ #3 #1 substring$ chr.to.int$ #128 - swap$
+          duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
+          #1 #1 substring$ chr.to.int$ #224 -
+          #6 mult.power2 +
+          #6 mult.power2 +
+        }
+      if$
+    }
+    {
+      duplicate$ #4 #1 substring$ chr.to.int$ #128 - swap$
+      duplicate$ #3 #1 substring$ chr.to.int$ #128 - swap$
+      duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
+      #1 #1 substring$ chr.to.int$ #240 -
+      #6 mult.power2 +
+      #6 mult.power2 +
+      #6 mult.power2 +
+    }
+  if$
+}
+
+% str, char -> bool
+% variable used: t
+FUNCTION {is.char.in.str}
+{
+  't :=
+
+  t "" =
+    { "is.char.in.str: Empty string is not a char!" warning$ }
+    'skip$
+  if$
+
+  #0 swap$
+  { duplicate$ "" = not }
+    {
+      split.first.char.from.str t =
+        { pop$ pop$ #1 "" }
+        'skip$
+      if$
+    }
+  while$
+  pop$
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.upper.ascii}
+{
+  char.to.unicode #65 swap$ #90 swap$ is.int.in.range
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.upper}
+{
+  duplicate$ is.upper.ascii
+    { pop$ #1 }
+    {
+      char.to.unicode duplicate$
+      #192 swap$ #214 swap$ is.int.in.range swap$
+      #216 swap$ #222 swap$ is.int.in.range or
+    }
+  if$
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.lower.ascii}
+{
+  char.to.unicode #97 swap$ #122 swap$ is.int.in.range
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.lower}
+{
+  duplicate$ is.lower.ascii
+    { pop$ #1 }
+    {
+      char.to.unicode duplicate$
+      #223 swap$ #246 swap$ is.int.in.range swap$
+      #248 swap$ #255 swap$ is.int.in.range or
+    }
+  if$
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.printable.ascii}
+{
+  char.to.unicode #32 swap$ #126 swap$ is.int.in.range
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.letter.ascii}
+{
+  duplicate$ is.upper.ascii swap$ is.lower.ascii or
+}
+
+% char -> bool
+% variable used: b
+FUNCTION {is.symbol.ascii}
+{
+  duplicate$ is.printable.ascii swap$ is.letter.ascii not and
+}
+
+% str -> bool
+% variable used: b
+% return true if str is empty
+FUNCTION {is.all.lower}
+{
+  #1 swap$
+  purify$
+  { duplicate$ "" = not }
+    {
+      split.first.char.from.str is.lower
+        'skip$
+        { pop$ pop$ #0 "" }
+      if$
+    }
+  while$
+  pop$
+}
+
+% str -> bool
+% variable used: b
+FUNCTION {is.in.title.case}
+{
+  purify$
+  duplicate$ "" =
+    { pop$ #0 }
+    {
+      split.first.char.from.str is.upper
+        {
+          duplicate$ "" =
+            { pop$ #0 }
+            'is.all.lower
+          if$
+        }
+        { pop$ #0 }
+      if$
+    }
+  if$
+}
+
+% char, int -> bool
+% variables used: t, b
+FUNCTION {is.in.inter.token.chars}
+{
+  duplicate$ #0 =
+    { pop$ " " = }
+    {
+      #1 =
+        { range.separators swap$ is.char.in.str }
+        'is.letter.ascii
+      if$
+    }
+  if$
+}
+
+% str, int -> intertoken: str, rest: str
+% variable used: t, b
+FUNCTION {skip.inter.token.chars.by}
+{
+  'b :=
+  't :=
+
+  "" t
+  { duplicate$ "" = not }
+    {
+      split.first.char.from.str
+      duplicate$ b is.in.inter.token.chars
+        { swap$ 't := * t }
+        { swap$ * 't := "" }
+      if$
+    }
+  while$
+
+  pop$ t
+}
+
+% str -> intertoken: str, rest: str
+% variable used: t, b
+FUNCTION {skip.inter.token.chars}
+{
+  #0 skip.inter.token.chars.by
+}
+
+% str -> intertoken: str, rest: str
+% variable used: t, b
+FUNCTION {skip.inter.token.command}
+{
+  duplicate$ "" =
+    { "" }
+    {
+      duplicate$ #1 #1 substring$ is.symbol.ascii
+        { split.first.char.from.str swap$ }
+        { #2 skip.inter.token.chars.by }
+     if$
+    }
+  if$
+}
+
+% str, str, char -> char
+% variable used: t
+FUNCTION {map.char}
+{
+  't :=
+  split.first.char.from.str
+  { swap$ duplicate$ "" = not }
+    {
+      swap$ t =
+        { pop$ "" t }
+        {
+          swap$ split.first.char.from.str pop$ swap$
+          split.first.char.from.str
+        }
+      if$
+    }
+  while$
+  pop$ t =
+    'get.first.char.from.str
+    { pop$ t }
+  if$
+}
+
+% char -> char
+% variables used: t, b
+FUNCTION {to.lower}
+{
+  duplicate$ is.upper.ascii
+    { chr.to.int$ #32 + int.to.chr$ }
+    { latin1.lower swap$ latin1.upper swap$ map.char }
+  if$
+}
+
+% char -> char
+% variables used: t, b
+FUNCTION {to.upper}
+{
+  duplicate$ is.lower.ascii
+    { chr.to.int$ #32 - int.to.chr$ }
+    { latin1.upper swap$ latin1.lower swap$ map.char }
+  if$
+}
+
+% texchar -> str
+% variables used: t, b
+FUNCTION {tex.to.lower}
+{
+  "" swap$
+  { duplicate$ "" = not }
+    {
+      split.first.char.from.str
+      duplicate$ #92 int.to.chr$ =
+        { swap$ skip.inter.token.command 't := * t }
+        { to.lower swap$ }
+      if$
+      't := * t
+    }
+  while$
+  pop$
+}
+
+% texchar -> str
+% variables used: t, b
+FUNCTION {tex.to.upper}
+{
+  "" swap$
+  { duplicate$ "" = not }
+    {
+      split.first.char.from.str
+      duplicate$ #92 int.to.chr$ =
+        { swap$ skip.inter.token.command 't := * t }
+        { to.upper swap$ }
+      if$
+      't := * t
+    }
+  while$
+  pop$
+}
+
+% str -> str
+% variable used: t, b
+FUNCTION {lower.token.if.in.title.case}
+{
+  duplicate$ is.in.title.case
+    { split.first.tex.char.from.str tex.to.lower swap$ * }
+    'skip$
+  if$
+}
+
+% int -> str
+FUNCTION {self.tokens}
+{
+  #0 =
+    'default.self.tokens
+    'range.separators
+  if$
+}
+
+% str, int -> token: str, rest: str
+% variables used: s, t, b
+FUNCTION {tokenize.by}
+{
+  'b :=
+  's :=
+
+  s "" =
+    { "" "" }
+    {
+      s split.first.char.from.str
+      duplicate$ b self.tokens swap$ is.char.in.str
+        'swap$
+        {
+          duplicate$ #92 int.to.chr$ =
+            { swap$ skip.inter.token.command 's := * s }
+            {
+              pop$ pop$ "" s
+              { duplicate$ "" = not }
+              {
+                split.first.char.from.str
+                duplicate$ "\ " b self.tokens * swap$ is.char.in.str
+                  { pop$ pop$ "" }
+                  {
+                    duplicate$ "{" =
+                      { swap$ find.match.brace }
+                      'swap$
+                    if$
+                    's := * s
+                  }
+                if$
+              }
+              while$
+              pop$ s
+            }
+          if$
+        }
+      if$
+    }
+  if$
+}
+
+% str -> str
+% variables used: s, t, b
+FUNCTION {tokenize}
+{
+  #0 tokenize.by
+}
+
+% str -> str
+% variables used: s, t, b
+FUNCTION {smart.sentence.case}
+{
+  tokenize 's :=
+
+  { s "" = not }
+    {
+      s skip.inter.token.chars 's := * s
+      tokenize swap$
+      duplicate$ ":" =
+        {
+          swap$ 's := *
+          s skip.inter.token.chars 's := * s
+          tokenize swap$
+          lowercase.word.after.colon
+            {
+              duplicate$ "A" =
+                { pop$ "a" }
+                'lower.token.if.in.title.case
+              if$
+            }
+            'skip$
+          if$
+        }
+        'lower.token.if.in.title.case
+      if$
+      swap$ 's := *
+    }
+  while$
+}
+
+% str -> str
+% variables used: s, t, b
+FUNCTION {smart.upper.case}
+{
+  s swap$ t swap$
+
+  "" swap$
+  { duplicate$ "" = not }
+    {
+      tokenize swap$
+      duplicate$ #1 #1 substring$ #92 int.to.chr$ =
+        'skip$
+        {
+          "" swap$
+          { duplicate$ "" = not }
+            {
+              split.first.tex.char.from.str
+              duplicate$ "{" =
+                { swap$ find.match.brace }
+                { tex.to.upper swap$ }
+              if$
+              't := * t
+            }
+          while$
+          pop$
+        }
+      if$
+      swap$ 't := * t
+      skip.inter.token.chars 't := * t
+    }
+  while$
+  pop$
+
+  swap$ 't :=
+  swap$ 's :=
+}
+
+%    \end{macrocode}
+%
 %
 % \subsection{Formatting chunks}
 %
@@ -2316,372 +2896,6 @@ FUNCTION {output.bibitem}
 % and hope the user has brace-surrounded words that need to stay capitilized;
 % for some styles, however, we leave it as it is in the database.
 %    \begin{macrocode}
-% int, int -> int
-FUNCTION {mult.power2}
-{
-  { duplicate$ #0 > }
-    {
-      swap$
-      duplicate$ +
-      swap$ #1 -
-    }
-  while$
-  pop$
-}
-
-INTEGERS { b }
-
-% int, int, int -> bool
-% variable used: b
-FUNCTION {is.int.in.range}
-{
-  'b :=
-  #1 +
-  b >
-    { #1 - b < }
-    { pop$ #0 }
-  if$
-}
-
-% str -> str, char|""
-FUNCTION {split.first.char.from.str}
-{
-  duplicate$ "" =
-    { "" }
-    {
-      duplicate$ #1 #1 substring$ chr.to.int$ #128 <
-        {
-          duplicate$ #1 #1 substring$ swap$
-          #2 global.max$ substring$ swap$
-        }
-        {
-          duplicate$ #1 #1 substring$ chr.to.int$ #224 <
-            {
-              duplicate$ #1 #2 substring$ swap$
-              #3 global.max$ substring$ swap$
-            }
-            {
-              duplicate$ #1 #1 substring$ chr.to.int$ #240 <
-                {
-                  duplicate$ #1 #3 substring$ swap$
-                  #4 global.max$ substring$ swap$
-                }
-                {
-                  duplicate$ #1 #4 substring$ swap$
-                  #5 global.max$ substring$ swap$
-                }
-              if$
-            }
-          if$
-        }
-      if$
-    }
-  if$
-}
-
-% str -> char|""
-FUNCTION {get.first.char.from.str}
-{
-  split.first.char.from.str swap$ pop$
-}
-
-% char -> int
-FUNCTION {char.to.unicode}
-{
-  duplicate$ #4 #1 substring$ "" =
-    {
-      duplicate$ #3 #1 substring$ "" =
-        {
-          duplicate$ #2 #1 substring$ "" =
-            { #1 #1 substring$ chr.to.int$ }
-            {
-              duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
-              #1 #1 substring$ chr.to.int$ #192 -
-              #6 mult.power2 +
-            }
-          if$
-        }
-        {
-          duplicate$ #3 #1 substring$ chr.to.int$ #128 - swap$
-          duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
-          #1 #1 substring$ chr.to.int$ #224 -
-          #6 mult.power2 +
-          #6 mult.power2 +
-        }
-      if$
-    }
-    {
-      duplicate$ #4 #1 substring$ chr.to.int$ #128 - swap$
-      duplicate$ #3 #1 substring$ chr.to.int$ #128 - swap$
-      duplicate$ #2 #1 substring$ chr.to.int$ #128 - swap$
-      #1 #1 substring$ chr.to.int$ #240 -
-      #6 mult.power2 +
-      #6 mult.power2 +
-      #6 mult.power2 +
-    }
-  if$
-}
-
-% str, char -> bool
-% variable used: t
-FUNCTION {is.char.in.str}
-{
-  't :=
-  #0 swap$
-  { duplicate$ "" = not }
-    {
-      split.first.char.from.str t =
-        { pop$ pop$ #1 "" }
-        'skip$
-      if$
-    }
-  while$
-  pop$
-}
-
-% char -> bool
-% variable used: b
-FUNCTION {is.upper.ascii}
-{
-  char.to.unicode #65 swap$ #90 swap$ is.int.in.range
-}
-
-% char -> bool
-% variable used: b
-FUNCTION {is.upper}
-{
-  duplicate$ is.upper.ascii
-    { pop$ #1 }
-    {
-      char.to.unicode duplicate$
-      #192 swap$ #214 swap$ is.int.in.range swap$
-      #216 swap$ #222 swap$ is.int.in.range or
-    }
-  if$
-}
-
-% char -> bool
-% variable used: b
-FUNCTION {is.lower.ascii}
-{
-  char.to.unicode #97 swap$ #122 swap$ is.int.in.range
-}
-
-% char -> bool
-% variable used: b
-FUNCTION {is.lower}
-{
-  duplicate$ is.lower.ascii
-    { pop$ #1 }
-    {
-      char.to.unicode duplicate$
-      #223 swap$ #246 swap$ is.int.in.range swap$
-      #248 swap$ #255 swap$ is.int.in.range or
-    }
-  if$
-}
-
-% str -> bool
-% variable used: b
-% return true if str is empty
-FUNCTION {is.all.lower}
-{
-  #1 swap$
-  { duplicate$ "" = not }
-    {
-      split.first.char.from.str is.lower
-        'skip$
-        { pop$ pop$ #0 "" }
-      if$
-    }
-  while$
-  pop$
-}
-
-% str, str, char -> char
-% variable used: t
-FUNCTION {map.char}
-{
-  't :=
-  split.first.char.from.str
-  { swap$ duplicate$ "" = not }
-    {
-      swap$ t =
-        { pop$ "" t }
-        {
-          swap$ split.first.char.from.str pop$ swap$
-          split.first.char.from.str
-        }
-      if$
-    }
-  while$
-  pop$ t =
-    'get.first.char.from.str
-    { pop$ t }
-  if$
-}
-
-% char -> char
-% variables used: t, b
-FUNCTION {to.lower}
-{
-  duplicate$ is.upper.ascii
-    { chr.to.int$ #32 + int.to.chr$ }
-    { latin1.lower swap$ latin1.upper swap$ map.char }
-  if$
-}
-
-% str -> bool
-% variable used: b
-FUNCTION {is.in.title.case}
-{
-  duplicate$ "" =
-    { pop$ #0 }
-    {
-      split.first.char.from.str is.upper
-        {
-          duplicate$ "" =
-            { pop$ #0 }
-            'is.all.lower
-          if$
-        }
-        { pop$ #0 }
-      if$
-    }
-  if$
-}
-
-% str -> str
-% variable used: t, b
-FUNCTION {lower.token.if.in.title.case}
-{
-  duplicate$ is.in.title.case
-    { split.first.char.from.str to.lower swap$ * }
-    'skip$
-  if$
-}
-
-% "{", str -> subtoken: str, rest: str
-% variables used: s, t
-FUNCTION {find.match.brace}
-{
-  's :=
-  't :=
-
-  #1
-  { duplicate$ #0 >
-    s empty$ not and }
-    {
-      s #1 #1 substring$ "{" =
-        { #1 + }
-        {
-          s #1 #1 substring$ "}" =
-            { #1 - }
-            'skip$
-          if$
-        }
-      if$
-      t s #1 #1 substring$ * 't :=
-      s #2 global.max$ substring$ 's :=
-    }
-  while$
-
-  #0 >
-    { "Unbalanced brace(s): one or more closing braces are missing" warning$ }
-    'skip$
-  if$
-
-  t
-  s
-}
-
-% str, str -> str, str
-FUNCTION {smart.sentence.case.inter.token}
-{
-  { duplicate$ #1 #1 substring$ " " = }
-    {
-      #2 global.max$ substring$ swap$
-      " " * swap$
-    }
-  while$
-}
-
-% int -> str
-FUNCTION {self.tokens}
-{
-  #0 =
-    'default.self.tokens
-    'range.separators
-  if$
-}
-
-% str, int -> token: str, rest: str
-% variables used: s, t, b
-FUNCTION {tokenize.by}
-{
-  'b :=
-  's :=
-
-  b self.tokens s get.first.char.from.str is.char.in.str
-    { s split.first.char.from.str swap$ }
-    {
-      ""
-      { " " b self.tokens * s get.first.char.from.str is.char.in.str
-        s empty$ or
-        not }
-        {
-          s split.first.char.from.str
-          duplicate$ "{" =
-            { swap$ find.match.brace }
-            'swap$
-          if$
-          's := *
-        }
-      while$
-      s
-    }
-  if$
-}
-
-% str -> token: str, rest: str
-% variables used: s, t, b
-FUNCTION {tokenize}
-{
-  #0 tokenize.by
-}
-
-% str -> str
-% variables used: s, t, b
-FUNCTION {smart.sentence.case}
-{
-  tokenize 's :=
-
-  { s "" = not }
-    {
-      s smart.sentence.case.inter.token
-      tokenize swap$
-      duplicate$ ":" =
-        {
-          swap$ 's := *
-          s smart.sentence.case.inter.token
-          tokenize swap$
-          lowercase.word.after.colon
-            {
-              duplicate$ "A" =
-                'to.lower
-                'lower.token.if.in.title.case
-              if$
-            }
-            'skip$
-          if$
-        }
-        'lower.token.if.in.title.case
-      if$
-      swap$ 's := *
-    }
-  while$
-}
-
 FUNCTION {change.sentence.case}
 { entry.lang lang.en =
     'smart.sentence.case
