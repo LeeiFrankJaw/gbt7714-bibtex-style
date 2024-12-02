@@ -1830,11 +1830,20 @@ FUNCTION {new.sentence.checkb}
 %    \end{macrocode}
 %
 % In order to support UTF-8 encoding, we need some auxiliary functions.  Below
-% are a series of such functions.
+% are a series of such functions.  We try to make functions loosely-coupled as
+% much as possible.  Where the use of variables is inevitable in functions, we
+% generally assume it is the caller's responsibility to save and restore those
+% variables.  Exceptions are made for some unary functions, where it is
+% convenient for the callee to do so.
 %    \begin{macrocode}
 INTEGERS { b }
 
-% int, int, int -> bool
+%    \end{macrocode}
+%
+% Function |is.int.in.range| takes a codepoint and two integers and check if the
+% codepoint is between these two integers (inclusive).
+%    \begin{macrocode}
+% codepoint: int, a: int, b: int -> bool
 % variable used: b
 FUNCTION {is.int.in.range}
 {
@@ -1848,9 +1857,9 @@ FUNCTION {is.int.in.range}
 
 %    \end{macrocode}
 %
-% Function |mult.power2| takes two integer arguments and returns \(2^nm\).
+% Function |mult.power2| takes two integers and returns \(2^nm\).
 %    \begin{macrocode}
-% int, int -> int
+% m: int, n: int -> int
 FUNCTION {mult.power2}
 {
   { duplicate$ #0 > }
@@ -1863,6 +1872,14 @@ FUNCTION {mult.power2}
   pop$
 }
 
+%    \end{macrocode}
+%
+% Function |find.match.brace| takes two strings, the first of which is assumed
+% to be |"{"|, and find the matching brace in the second string.  It returns a
+% token (or subtoken) and the rest of the string after the matching brace.  When
+% braces are unmatched, it issues a warning and complete the brace
+% automatically, following the convention of the original \hologo{BibTeX}.
+%    \begin{macrocode}
 % "{", str -> subtoken: str, rest: str
 % variables used: s, t
 FUNCTION {find.match.brace}
@@ -1906,6 +1923,11 @@ FUNCTION {find.match.brace}
   s
 }
 
+%    \end{macrocode}
+%
+% Function |split.first.char.from.str| takes a UTF-8 string and return
+% the first UTF-8 character and the rest of the string in reverse order.
+%    \begin{macrocode}
 % str -> str, char
 FUNCTION {split.first.char.from.str}
 {
@@ -1945,12 +1967,24 @@ FUNCTION {split.first.char.from.str}
   if$
 }
 
+%    \end{macrocode}
+%
+% Function |get.first.char.from.str| takes a UTF-8 string and return the
+% first UTF-8 character.
+%    \begin{macrocode}
 % str -> char
 FUNCTION {get.first.char.from.str}
 {
   split.first.char.from.str swap$ pop$
 }
 
+%    \end{macrocode}
+%
+% Function |split.first.tex.char.from.str| is like
+% |split.first.char.from.str|.  It takes a UTF-8 string and return the
+% first UTF-8 character or first \TeX group and the rest of string in
+% reverse order.
+%    \begin{macrocode}
 % str -> rest: str, texchar
 FUNCTION {split.first.tex.char.from.str}
 {
@@ -1963,6 +1997,13 @@ FUNCTION {split.first.tex.char.from.str}
   if$
 }
 
+%    \end{macrocode}
+%
+% Function |char.to.unicode| takes a UTF-8 character and returns its
+% codepoint in Unicode.  It issues a warning and returns \(-1\) if the
+% presumed character is an empty string.  For other invalid input, the
+% behavior is undefined.
+%    \begin{macrocode}
 % char -> int
 FUNCTION {char.to.unicode}
 {
@@ -2008,6 +2049,14 @@ FUNCTION {char.to.unicode}
   if$
 }
 
+%    \end{macrocode}
+%
+% Function |is.char.in.str| takes a string and a UTF-8 character.  It
+% checks whether the character is in the string.  It issues a warning
+% and returns \(0\) if the presumed character is an empty string.  It
+% also returns \(0\) if the string itself is empty.  For other input,
+% the behavior is undefined.
+%    \begin{macrocode}
 % str, char -> bool
 % variable used: t
 FUNCTION {is.char.in.str}
@@ -2031,6 +2080,11 @@ FUNCTION {is.char.in.str}
   pop$
 }
 
+%    \end{macrocode}
+%
+% Function |is.upper.ascii| takes a UTF-8 character and checks whether
+% it is an uppercase ASCII letter.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.upper.ascii}
@@ -2038,6 +2092,11 @@ FUNCTION {is.upper.ascii}
   char.to.unicode #65 swap$ #90 swap$ is.int.in.range
 }
 
+%    \end{macrocode}
+%
+% Function |is.upper| takes a UTF-8 character and checks whether it is
+% uppercase in the range from |U+0000| to |U+017F|.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.upper}
@@ -2048,6 +2107,11 @@ FUNCTION {is.upper}
   if$
 }
 
+%    \end{macrocode}
+%
+% Function |is.lower.ascii| takes a UTF-8 character and checks whether
+% it is a lowercase ASCII letter.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.lower.ascii}
@@ -2055,6 +2119,11 @@ FUNCTION {is.lower.ascii}
   char.to.unicode #97 swap$ #122 swap$ is.int.in.range
 }
 
+%    \end{macrocode}
+%
+% Function |is.upper| takes a UTF-8 character and checks whether it is
+% lowercase in the range from |U+0000| to |U+017F|.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.lower}
@@ -2065,6 +2134,11 @@ FUNCTION {is.lower}
   if$
 }
 
+%    \end{macrocode}
+%
+% Function |is.printable.ascii| takes a UTF-8 character and checks
+% whether it is a printable ASCII character.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.printable.ascii}
@@ -2072,6 +2146,11 @@ FUNCTION {is.printable.ascii}
   char.to.unicode #32 swap$ #126 swap$ is.int.in.range
 }
 
+%    \end{macrocode}
+%
+% Function |is.letter.ascii| takes a UTF-8 character and checks
+% whether it is an ASCII letter.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.letter.ascii}
@@ -2079,6 +2158,11 @@ FUNCTION {is.letter.ascii}
   duplicate$ is.upper.ascii swap$ is.lower.ascii or
 }
 
+%    \end{macrocode}
+%
+% Function |is.symbol.ascii| takes a UTF-8 character and checks whether
+% it is a printable ASCII character but not an ASCII letter.
+%    \begin{macrocode}
 % char -> bool
 % variable used: b
 FUNCTION {is.symbol.ascii}
@@ -2086,6 +2170,11 @@ FUNCTION {is.symbol.ascii}
   duplicate$ is.printable.ascii swap$ is.letter.ascii not and
 }
 
+%    \end{macrocode}
+%
+% Function |is.all.lower| takes a string and checks whether every
+% character in it is lowercase in the range from |U+0000| to |U+017F|.
+%    \begin{macrocode}
 % str -> bool
 % variable used: b
 % return true if str is empty
