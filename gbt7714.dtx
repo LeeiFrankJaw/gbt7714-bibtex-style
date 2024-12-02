@@ -2147,7 +2147,7 @@ FUNCTION {is.in.inter.token.chars}
     { pop$ " " = }
     {
       #1 =
-        { range.separators swap$ is.char.in.str }
+        { " " range.separators * swap$ is.char.in.str }
         'is.letter.ascii
       if$
     }
@@ -2399,7 +2399,7 @@ FUNCTION {self.tokens}
 {
   #0 =
     'default.self.tokens
-    { range.separators "," * }
+    'range.separators
   if$
 }
 
@@ -3770,13 +3770,14 @@ FUNCTION {normalize.page.range}
   "" swap$
   { duplicate$ empty$ not }
     {
-      #1 tokenize.by
       #1 skip.inter.token.chars.by 't :=
       empty$
         { "" }
-        { page.range.separator }
+        'page.range.separator
       if$
-      * * t
+      * t
+      #1 tokenize.by 't :=
+      * t
     }
   while$
   pop$
